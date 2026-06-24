@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { authClient } from "@/lib/auth-client";
 import * as z from "zod";
 import Link from "next/link";
 import Image from "next/image";
@@ -37,6 +38,7 @@ const LoginCard = () => {
     setIsPending(true);
     setError(null);
     try {
+      await authClient.signIn.email({...values})
       console.log(values);
     } catch (err) {
       setError("Invalid email or password.");
@@ -45,8 +47,12 @@ const LoginCard = () => {
     }
   };
 
-  const onSocialSignIn = (provider: "google" | "github") => {
+  const onSocialSignIn = async(provider: "google" | "github") => {
     setIsPending(true);
+    await authClient.signIn.social({
+      provider:provider
+    })
+    
     console.log(`Signing in with ${provider}`);
   };
 

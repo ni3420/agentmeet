@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import {registerSchema} from "../schema"
+import { authClient } from "@/lib/auth-client";
 type RegisterCardFormValues = z.infer<typeof registerSchema>;
 
 const RegisterCard = () => {
@@ -38,7 +39,7 @@ const RegisterCard = () => {
     setIsPending(true);
     setError(null);
     try {
-      
+      await authClient.signUp.email({...values,callbackURL:"/"})
       console.log(values);
     } catch (err) {
       setError("Something went wrong. Please try again.");
