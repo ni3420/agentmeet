@@ -50,7 +50,8 @@
 
 :root {
   /* Fonts Setup */
-  --font-sans: "Geist Sans", "Inter", sans-serif;
+  --font-sans: "Geist Sans", "Inter", system-ui, sans-serif;
+  --font-geist-mono: "Geist Mono", "Fira Code", monospace;
 
   /* Global Colors (Soft Light Slate & Clean White) */
   --background: oklch(0.99 0.003 240);
@@ -116,8 +117,8 @@
   --accent-foreground: oklch(0.97 0.005 240);
   
   --destructive: oklch(0.50 0.20 27);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.69 0.145 162.55);
   
   /* Sidebar Dark Mode */
@@ -127,24 +128,38 @@
   --sidebar-primary-foreground: oklch(0.11 0.012 240);
   --sidebar-accent: oklch(0.18 0.015 240);
   --sidebar-accent-foreground: oklch(0.97 0.005 240);
-  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-border: oklch(1 0 0 / 6%);
   --sidebar-ring: oklch(0.69 0.145 162.55);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground antialiased;
-  }
-  html {
-    @apply font-sans;
+    @apply border-border/80 outline-ring/40 tracking-normal transition-colors duration-150;
   }
   
-  /* Global Button Pointer Feedback Fix [04:54:12] */
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  html {
+    @apply font-sans scroll-smooth;
+  }
+
+  /* Premium Focus Indicator Alignment Matrix */
+  focus-visible,
+  :focus-visible {
+    @apply outline-hidden ring-2 ring-primary/60 ring-offset-2 ring-offset-background;
+  }
+
+  /* Global Button Pointer & Physics Feedback Fix */
   button:not(:disabled), 
   [role="button"]:not(:disabled) {
-    @apply cursor-pointer;
+    @apply cursor-pointer select-none active:scale-[0.98] transition-transform duration-100 will-change-transform;
+  }
+
+  /* Structural Premium Glassmorphic Layer Utility */
+  .premium-glass {
+    @apply bg-card/70 backdrop-blur-md border border-border/60 shadow-xs;
   }
 }
