@@ -25,12 +25,12 @@ const navItems = [
   },
   {
     label: "Meetings",
-    href: "/dashboard/meetings",
+    href: "/meeting",
     icon: Video,
   },
   {
     label: "AI Agents",
-    href: "/dashboard/agents",
+    href: "/agents",
     icon: Bot,
   },
 ];
