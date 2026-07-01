@@ -1,6 +1,6 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
-
+import { pgTable, text, timestamp, boolean, index, pgEnum } from "drizzle-orm/pg-core";
+import {nanoid}from "nanoid"
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -78,18 +78,35 @@ export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
 }));
 
+export const agents=pgTable("agents",{
+  id:text("id")
+  .primaryKey()
+  .$defaultFn(()=>nanoid()),
+  name:text("name").notNull(),
+  userId:text("user_id")
+  .notNull()
+  .references(()=>user.id),
+  instructions:text("instruction").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow()
+}) 
 
 
-// export const sessionRelations = relations(session, ({ one }) => ({
-//   user: one(user, {
-//     fields: [session.userId],
-//     references: [user.id],
-//   }),
-// }));
+const meetingStatus=pgEnum("meeting_status",["upcoming","active","complete"])
 
-// export const accountRelations = relations(account, ({ one }) => ({
-//   user: one(user, {
-//     fields: [account.userId],
-//     references: [user.id],
-//   }),
-// }));
+
+export const meeting=pgTable("agents",{
+  id:text("id")
+  .primaryKey()
+  .$defaultFn(()=>nanoid()),
+  name:text("name").notNull(),
+  userId:text("user_id")
+  .notNull()
+  .references(()=>user.id),
+  agentId:text("agent_id").notNull().references(()=>agents.id),
+  status:meetingStatus("status").notNull().default("upcoming"),
+  instructions:text("instruction").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow()
+}) 
+
