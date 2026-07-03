@@ -2,7 +2,6 @@
 
 import { Loader2, Bot, Terminal, ShieldAlert, Cpu } from "lucide-react";
 import { useGetAllAgents } from "@/features/agents/api/use-get-all-agents";
-import { cn } from "@/lib/utils";
 import { 
   Table, 
   TableBody, 
@@ -83,17 +82,6 @@ export default function AgentsList() {
                   <p className="text-xs text-muted-foreground/90 font-medium line-clamp-2 max-w-xl leading-relaxed">
                     {agent.instructions}
                   </p>
-                </TableCell>
-                <TableCell className="px-4 py-3 text-right">
-                  {/* <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight border capitalize select-none bg-muted/60 text-foreground border-border/80">
-                    <span className={cn(
-                      "w-1.5 h-1.5 rounded-full",
-                      agent.status === "active" && "bg-emerald-500 animate-pulse",
-                      agent.status === "idle" && "bg-amber-500",
-                      agent.status === "failed" && "bg-destructive"
-                    )} />
-                    {agent.status}
-                  </span> */}
                 </TableCell>
               </TableRow>
             ))
