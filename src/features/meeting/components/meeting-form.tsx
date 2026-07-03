@@ -3,32 +3,25 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useQuery } from "@tanstack/react-query";
-import { client } from "@/lib/rpc";
 import { useCreateMeeting } from "../api/use-create-meeting";
 import { Loader2, CalendarPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-const formSchema = z.object({
-  name: z.string().min(1, "Meeting title is required"),
-  agentId: z.string().min(1, "Please select an evaluation agent"),
-});
-
+import { useGetAllAgents } from "@/features/agents/api/use-get-all-agents";
+import {agentSchema} from "@/features/agents/schema/schema"
+import {formSchema} from "../schema/schema"
+type AgentsDataType=z.infer<typeof agentSchema>
 type FormValues = z.infer<typeof formSchema>;
 
-export default function MeetingForm() {
+ type MeetingFormProps={
+  close?:()=>void
+}
+
+export default function MeetingForm({close}:MeetingFormProps) {
   const { mutate: createMeeting, isPending: isCreating } = useCreateMeeting();
 
-  const { data: agentsData, isLoading: isLoadingAgents } = useQuery({
-    queryKey: ["agents"],
-    queryFn: async () => {
-      const res = await client.api.rpc.agents.$get();
-      if (!res.ok) throw new Error("Failed to load agents");
-      return res.json();
-    },
-  });
+  const { data: agentsData, isLoading: isLoadingAgents } = useGetAllAgents()
 
   const {
     register,
@@ -51,13 +44,14 @@ console.log(selectedAgent)
     const data= {
         name: values.name,
         agentId: values.agentId,
-        instructions:selectedAgent?.instructions
+        instructions:selectedAgent?.instructions as string
       }
     createMeeting(
      {json: data},
       {
         onSuccess: () => {
           toast.success("Meeting room context provisioned cleanly");
+          close?.()
           reset();
         },
         onError: () => {
@@ -104,7 +98,7 @@ console.log(selectedAgent)
             <option value="" className="bg-popover text-muted-foreground">
               {isLoadingAgents ? "Loading pipeline..." : "Select specialized model"}
             </option>
-            {agentsData?.data?.map((agent: any) => (
+            {agentsData?.data?.map((agent: AgentsDataType) => (
               <option 
                 key={agent.id} 
                 value={agent.id}

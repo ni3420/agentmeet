@@ -16,3 +16,9 @@ export const updateMeetingSchema = z.object({
   summary: z.string().nullable().optional(),
   instructions: z.string().optional(),
 });
+
+
+export const formSchema = z.object({
+  name: z.string().min(1, "Meeting title is required"),
+  agentId: z.string().min(1, "Please select an evaluation agent"),
+});

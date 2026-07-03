@@ -10,7 +10,8 @@ export const useCreateMeeting = () => {
 
   return useMutation<ResponseType, Error, RequestType>({
     mutationFn: async (json) => {
-      const res = await client.api.rpc.meeting.$post({ json });
+      const res = await client.api.rpc.meeting.$post( json );
+      
 
       if (!res.ok) {
         throw new Error("Failed to initialize structural meeting profile context");
