@@ -4,8 +4,8 @@ import { Hono } from "hono";
 import { auth } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 import { zValidator } from "@hono/zod-validator";
-import {createMeetingSchema,updateMeetingSchema} from "../schema/schema"
-
+import { StreamClient } from "@stream-io/node-sdk";
+import { createMeetingSchema, updateMeetingSchema } from "../schema/schema";
 
 const app = new Hono()
   .get("/", async (c) => {
@@ -42,6 +42,38 @@ const app = new Hono()
 
     return c.json({ status: 201, data: newMeeting }, 201);
   })
+  .post("/:id/token", async (c) => {
+    const id = c.req.param("id");
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+
+    if (!session?.session?.userId) {
+      return c.json({ status: 401, error: "Unauthorized" }, 401);
+    }
+
+    const [row] = await db.select().from(meeting).where(eq(meeting.id, id));
+    if (!row) {
+      return c.json({ status: 404, error: "Target meeting environment missing" }, 404);
+    }
+
+    const apiKey = process.env.STREAM_VIDEO_API_KEY;
+    const apiSecret = process.env.STREAM_VIDEO_SECRET_KEY;
+
+    if (!apiKey || !apiSecret) {
+      return c.json({ status: 500, error: "Stream credentials misconfigured" }, 500);
+    }
+
+    const streamClient = new StreamClient(apiKey, apiSecret);
+    const validity = Math.floor(Date.now() / 1000) + 3600;
+    const videoToken = streamClient.createToken(session.session.userId, validity);
+
+    return c.json({
+      status: 200,
+      token: videoToken,
+      apiKey,
+      userId: session.session.userId,
+      userName: session.user.name || "User",
+    });
+  })
   .patch("/:id", zValidator("json", updateMeetingSchema), async (c) => {
     const id = c.req.param("id");
     const body = c.req.valid("json");
@@ -51,9 +83,9 @@ const app = new Hono()
       return c.json({ status: 401, error: "Unauthorized" }, 401);
     }
 
-    const updatePayload: Record<string, any> = { ...body, updatedAt: new Date() };
-    if (body.startedAt) updatePayload.startedAt = new Date(body.startedAt);
-    if (body.endedAt) updatePayload.endedAt = new Date(body.endedAt);
+    const updatePayload: Record<string, unknown> = { ...body, updatedAt: new Date() };
+    if (body.startedAt) updatePayload.startedAt = new Date(body.startedAt as string);
+    if (body.endedAt) updatePayload.endedAt = new Date(body.endedAt as string);
 
     const [updatedMeeting] = await db
       .update(meeting)

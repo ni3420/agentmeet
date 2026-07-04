@@ -160,7 +160,7 @@ export default function MeetingDataTable() {
                     </TableCell>
                     <TableCell className="text-right pr-6 py-3">
                       <Button variant="ghost" size="sm" asChild className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground">
-                        <Link href={`/interviews/${meeting.id}`} className="gap-x-1">
+                        <Link href={`/meeting/${meeting.id}`} className="gap-x-1">
                           Join Room
                           <ArrowRight className="size-3 opacity-70 group-hover:translate-x-0.5 transition-transform" />
                         </Link>
