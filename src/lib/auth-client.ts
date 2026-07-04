@@ -5,4 +5,4 @@ export const authClient = createAuthClient({
 
 })
 
-export const Session= typeof authClient.$Infer.Session
+// export const Session= typeof authClient.$Infer.Session
