@@ -1,36 +1,25 @@
-import { client } from "@/lib/rpc";
-import { useQuery } from "@tanstack/react-query";
+import { client } from "@/lib/rpc"
+import { useMutation } from "@tanstack/react-query"
+import {InferResponseType} from "hono"
 
-interface TokenResponse {
-  status: number;
-  token: string;
-  apiKey: string;
-  userId: string;
-  userName: string;
-  error?: string;
+type ResponseType=InferResponseType<typeof client.api.rpc.meeting[":id"]["token"]["$post"],200>
+type  RequestType={
+  id:string,
 }
-
-export const useStreamVideo = (meetingId: string) => {
-  return useQuery<TokenResponse, Error>({
-    queryKey: ["meetings", meetingId, "token"],
-    queryFn: async () => {
-      try {
-        const res = await client.api.rpc.meeting[":id"]["token"].$post({
-          param: { id: meetingId },
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.error || "Failed to fetch stream token configuration");
-        }
-
-        const data = await res.json();
-        return data as TokenResponse;
-      } catch (error: any) {
-        throw new Error(error.message || "Failed to fetch stream token configuration");
+export const useStreamVideo=()=>{
+  return useMutation<ResponseType,Error,RequestType>({
+    mutationFn:async(json)=>{
+      const res=await client.api.rpc.meeting[":id"]["token"]["$post"]({
+        param:json
+      })
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error("data is not found");
       }
-    },
-    enabled: !!meetingId,
-    staleTime: 5 * 60 * 1000,
-  });
-};
+       
+      return await res.json()
+    }
+
+  })
+
+}

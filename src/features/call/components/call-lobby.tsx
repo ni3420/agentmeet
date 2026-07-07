@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { 
   VideoPreview, 
   ToggleAudioPreviewButton, 
@@ -10,22 +10,19 @@ import {
 import { LogIn, XCircle } from "lucide-react";
 
 interface CallLobbyProps {
+  meetingName: string;
   onJoin: () => void;
   onCancel: () => void;
-  meetingName?: string;
 }
 
-
-const CallLobby = ({ onJoin, onCancel, meetingName = "AI Meeting" }: CallLobbyProps) => {
-  const [hasPermission, setHasBrowserPermission] = useState(true);
-  const [isJoining, setIsClosing] = useState(false);
-
+const CallLobby = ({ meetingName, onJoin, onCancel }: CallLobbyProps) => {
   const dummyParticipant = {
     id: "local-preview",
     name: "You",
     image: "",
     isLocalParticipant: true,
   };
+
   const CustomPlaceholder = () => (
     <div className="flex flex-col items-center justify-center h-full bg-neutral-900 text-neutral-400">
       <DefaultVideoPlaceholder participant={dummyParticipant as any} />
@@ -45,21 +42,12 @@ const CallLobby = ({ onJoin, onCancel, meetingName = "AI Meeting" }: CallLobbyPr
             {meetingName}
           </h1>
           <p className="text-sm text-neutral-400 max-w-md mx-auto">
-            Please configure your camera and microphone setup before joining the session.
+            Configure your setup before joining the live session.
           </p>
         </div>
 
         <div className="relative aspect-video w-full bg-neutral-950 rounded-xl overflow-hidden border border-neutral-800 shadow-inner flex items-center justify-center">
-          {hasPermission ? (
-            <VideoPreview DisabledVideoPreview={CustomPlaceholder} />
-          ) : (
-            <div className="text-center p-4 space-y-3">
-              <XCircle className="size-12 text-rose-500 mx-auto animate-pulse" />
-              <p className="text-sm text-neutral-400 max-w-xs">
-                Please grant camera and microphone access within your browser permissions.
-              </p>
-            </div>
-          )}
+          <VideoPreview DisabledVideoPreview={CustomPlaceholder} />
         </div>
 
         <div className="flex items-center justify-center gap-4">
@@ -74,7 +62,7 @@ const CallLobby = ({ onJoin, onCancel, meetingName = "AI Meeting" }: CallLobbyPr
           <button
             type="button"
             onClick={onCancel}
-            className="w-full sm:w-auto px-5 py-2.5 text-sm font-medium text-neutral-400 hover:text-white hover:bg-neutral-800/50 rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-5 py-2.5 text-sm font-medium text-neutral-400 hover:text-white hover:bg-neutral-800/50 rounded-xl transition-all duration-200"
           >
             Cancel
           </button>
@@ -82,8 +70,7 @@ const CallLobby = ({ onJoin, onCancel, meetingName = "AI Meeting" }: CallLobbyPr
           <button
             type="button"
             onClick={onJoin}
-            disabled={!hasPermission || isJoining}
-            className="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl shadow-lg shadow-emerald-900/20 transition-all duration-200 flex items-center justify-center gap-2 group"
+            className="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 group"
           >
             <span>Join Meeting</span>
             <LogIn className="size-4 group-hover:translate-x-0.5 transition-transform" />
