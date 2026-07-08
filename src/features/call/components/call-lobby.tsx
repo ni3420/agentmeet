@@ -1,13 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { 
   VideoPreview, 
-  ToggleAudioPreviewButton, 
-  ToggleVideoPreviewButton,
+  useCall,
+  useCallStateHooks,
   DefaultVideoPlaceholder
 } from "@stream-io/video-react-sdk";
-import { LogIn, XCircle } from "lucide-react";
+import { LogIn, Mic, MicOff, Video, VideoOff, Loader2 } from "lucide-react";
+import { authClient } from "@/lib/auth-client"; 
+import Image from "next/image";
+import "@stream-io/video-react-sdk/dist/css/styles.css";
 
 interface CallLobbyProps {
   meetingName: string;
@@ -16,17 +19,50 @@ interface CallLobbyProps {
 }
 
 const CallLobby = ({ meetingName, onJoin, onCancel }: CallLobbyProps) => {
-  const dummyParticipant = {
-    id: "local-preview",
-    name: "You",
-    image: "",
+  const { data: session, isPending } = authClient.useSession();
+  const call = useCall();
+  const { useCameraState, useMicrophoneState } = useCallStateHooks();
+  
+  const { camera, isMute: isCamMuted } = useCameraState();
+  const { microphone, isMute: isMicMuted } = useMicrophoneState();
+
+  useEffect(() => {
+    if (!call) return;
+    
+    call.camera.enable().catch(console.error);
+    call.microphone.enable().catch(console.error);
+  }, [call]);
+
+  if (isPending) {
+    return (
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-neutral-950 text-white gap-3">
+        <Loader2 className="size-8 animate-spin text-emerald-500" />
+        <p className="text-sm font-medium text-neutral-400">Loading profile configuration...</p>
+      </div>
+    );
+  }
+
+  const userParticipant = {
+    id: session?.user?.id || "local-preview",
+    name: session?.user?.name || "You",
+    image: session?.user?.image || "",
     isLocalParticipant: true,
   };
 
   const CustomPlaceholder = () => (
-    <div className="flex flex-col items-center justify-center h-full bg-neutral-900 text-neutral-400">
-      <DefaultVideoPlaceholder participant={dummyParticipant as any} />
-      <p className="text-sm mt-2 font-mono">Camera is turned off</p>
+    <div className="flex flex-col items-center justify-center h-full bg-neutral-900 text-neutral-400 gap-3">
+      {userParticipant.image ? (
+        <Image
+          src={userParticipant.image} 
+          alt={userParticipant.name} 
+          width={80}
+          height={80}
+          className="rounded-full border border-neutral-700 object-cover shadow-lg"
+        />
+      ) : (
+        <DefaultVideoPlaceholder participant={userParticipant as any} />
+      )}
+      <p className="text-sm font-medium tracking-wide text-neutral-400">Your camera is turned off</p>
     </div>
   );
 
@@ -42,7 +78,7 @@ const CallLobby = ({ meetingName, onJoin, onCancel }: CallLobbyProps) => {
             {meetingName}
           </h1>
           <p className="text-sm text-neutral-400 max-w-md mx-auto">
-            Configure your setup before joining the live session.
+            Review your media controls, <span className="text-neutral-200 font-medium">{userParticipant.name}</span>, before stepping into the room.
           </p>
         </div>
 
@@ -51,14 +87,36 @@ const CallLobby = ({ meetingName, onJoin, onCancel }: CallLobbyProps) => {
         </div>
 
         <div className="flex items-center justify-center gap-4">
-          <div className="bg-neutral-950/80 border border-neutral-800 px-4 py-2 rounded-full flex items-center gap-3 shadow-lg">
-            <ToggleAudioPreviewButton />
+          <div className="bg-neutral-950/80 border border-neutral-800 px-6 py-3 rounded-full flex items-center gap-4 shadow-xl">
+            <button
+              type="button"
+              onClick={() => camera.toggle()}
+              className={`p-3 rounded-full border transition-all duration-200 ${
+                !isCamMuted 
+                  ? "bg-neutral-900 border-neutral-800 text-neutral-200 hover:bg-neutral-800" 
+                  : "bg-rose-500/10 border-rose-500/30 text-rose-500 hover:bg-rose-500/20"
+              }`}
+            >
+              {!isCamMuted ? <Video className="size-5" /> : <VideoOff className="size-5" />}
+            </button>
+
             <div className="w-px h-6 bg-neutral-800" />
-            <ToggleVideoPreviewButton />
+
+            <button
+              type="button"
+              onClick={() => microphone.toggle()}
+              className={`p-3 rounded-full border transition-all duration-200 ${
+                !isMicMuted 
+                  ? "bg-neutral-900 border-neutral-800 text-neutral-200 hover:bg-neutral-800" 
+                  : "bg-rose-500/10 border-rose-500/30 text-rose-500 hover:bg-rose-500/20"
+              }`}
+            >
+              {!isMicMuted ? <Mic className="size-5" /> : <MicOff className="size-5" />}
+            </button>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-neutral-800/60">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-neutral-800/60">
           <button
             type="button"
             onClick={onCancel}

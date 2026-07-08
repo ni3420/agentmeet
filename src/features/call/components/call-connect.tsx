@@ -2,9 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { useStreamVideo } from "../api/use-stream-video-call";
-import { StreamVideoClient, Call, SpeakerLayout,   StreamCall, StreamVideo } from "@stream-io/video-react-sdk";
+import { StreamVideoClient, Call,  StreamCall, StreamVideo } from "@stream-io/video-react-sdk";
 import { Loader2, AlertCircle } from "lucide-react";
-import "@/app/index.css"
 import CallUI from "./call-ui";
 
 
@@ -21,10 +20,12 @@ const CallConnect = ({
   userId,
   userImage,
   username,
+  meetingName
 }: CallConnectProps) => {
   const { mutate: generateToken, isPending, error, data } = useStreamVideo();
   const [clientInstance, setClientInstance] = useState<StreamVideoClient | null>(null);
   const [callInstance, setCallInstance] = useState<Call | null>(null);
+  
 
   useEffect(() => {
     if (!meetingId) return;
@@ -106,7 +107,13 @@ const CallConnect = ({
   return (
       <StreamVideo client={clientInstance}>
       <StreamCall call={callInstance}>
-        <CallUI/>
+        <CallUI
+         meetingId={meetingId} 
+         meetingName={meetingName}
+         userId={userId}
+         username={username}
+         userImage={userImage}
+         />
       </StreamCall>
     </StreamVideo>
   );
