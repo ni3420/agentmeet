@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "dev:webhook":"ngrok http --url=womb-tutu-lagging.ngrok-free.dev 3000"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.6.20",

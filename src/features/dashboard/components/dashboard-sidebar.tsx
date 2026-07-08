@@ -39,6 +39,7 @@ const SideBar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
+  
 
   const onSignOut = async () => {
     await authClient.signOut({

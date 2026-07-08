@@ -54,7 +54,6 @@ const statusConfig = {
 export default function MeetingDataTable() {
   const { data, isLoading, error } = useGetMeetings();
 
-  // 1. Reactive Filtering States
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [agentFilter, setAgentFilter] = useState("all");
@@ -87,7 +86,6 @@ export default function MeetingDataTable() {
 
   const rawMeetings = data?.data || [];
 
-  // 2. In-Memory Search and Filtering Core Evaluation Logic
   const filteredMeetings = rawMeetings.filter((meeting: MeetingRowType) => {
     const matchesSearch = meeting.name.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || meeting.status === statusFilter;
@@ -98,7 +96,6 @@ export default function MeetingDataTable() {
 
   return (
     <div className="space-y-4 select-none">
-      {/* 3. Drop in the header shell with binding triggers attached */}
       <MeetingHeader 
         search={search}
         onSearchChange={setSearch}
@@ -160,7 +157,7 @@ export default function MeetingDataTable() {
                     </TableCell>
                     <TableCell className="text-right pr-6 py-3">
                       <Button variant="ghost" size="sm" asChild className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground">
-                        <Link href={`/meeting/${meeting.id}`} className="gap-x-1">
+                        <Link href={`call/${meeting.id}`} className="gap-x-1">
                           Join Room
                           <ArrowRight className="size-3 opacity-70 group-hover:translate-x-0.5 transition-transform" />
                         </Link>

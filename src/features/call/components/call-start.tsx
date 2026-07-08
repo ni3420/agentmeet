@@ -64,7 +64,7 @@ const CallStarted = ({ meetingId, meetingName, onLeave }: CallStartedProps) => {
         <div className="absolute top-4 left-4 right-4 z-50 flex items-center justify-between pointer-events-none">
           <div className="flex items-center gap-2">
             <div className="bg-neutral-900/70 backdrop-blur-md border border-neutral-800/80 px-4 py-2 rounded-xl flex items-center gap-3 pointer-events-auto shadow-xl">
-              <Link href="/meetings" className="text-neutral-400 hover:text-white transition-colors mr-1">
+              <Link href="/meeting" className="text-neutral-400 hover:text-white transition-colors mr-1">
                 <Home className="size-4" />
               </Link>
               <div className="w-px h-4 bg-neutral-800" />

@@ -4,8 +4,8 @@ import { Hono } from "hono";
 import { auth } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 import { zValidator } from "@hono/zod-validator";
-import { StreamClient } from "@stream-io/node-sdk";
 import { createMeetingSchema, updateMeetingSchema } from "../schema/schema";
+import { streamVideo } from "@/lib/stream-video";
 
 const app = new Hono()
   .get("/", async (c) => {
@@ -40,6 +40,32 @@ const app = new Hono()
       })
       .returning();
 
+    try {
+      const call = streamVideo.video.call("default", newMeeting.id);
+      await call.create({
+        data: {
+          created_by_id: session.session.userId,
+          custom: {
+            meetingId: newMeeting.id,
+            meetingName: newMeeting.name,
+          },
+          settings_override: {
+            transcription: {
+              language: "en",
+              mode: "auto-on",
+              closed_caption_mode: "auto-on"
+            },
+            recording: {
+              mode: "auto-on",
+              quality: "1080p"
+            }
+          }
+        }
+      });
+    } catch (err) {
+      console.error(err);
+    }
+
     return c.json({ status: 201, data: newMeeting }, 201);
   })
   .post("/:id/token", async (c) => {
@@ -52,26 +78,31 @@ const app = new Hono()
 
     const [row] = await db.select().from(meeting).where(eq(meeting.id, id));
     if (!row) {
-      return c.json({ status: 404, error: "Target meeting environment missing" }, 404);
+      return c.json({ status: 404, error: "Meeting workspace target missing" }, 404);
     }
 
-    const apiKey = process.env.STREAM_VIDEO_API_KEY;
-    const apiSecret = process.env.STREAM_VIDEO_SECRET_KEY;
+    await streamVideo.upsertUsers([
+  {
+    id: session.session.userId,
+    name: session.user.name || "Participant",
+    role: "admin",
+  }
+]);
 
-    if (!apiKey || !apiSecret) {
-      return c.json({ status: 500, error: "Stream credentials misconfigured" }, 500);
-    }
+    const expirationTime = Math.floor(Date.now() / 1000) + 3600;
 
-    const streamClient = new StreamClient(apiKey, apiSecret);
-    const validity = Math.floor(Date.now() / 1000) + 3600;
-    const videoToken = streamClient.createToken(session.session.userId, validity);
+    const token = streamVideo.generateUserToken({
+      user_id: session?.session.userId,
+      validityInSeconds: expirationTime
+    });
 
     return c.json({
       status: 200,
-      token: videoToken,
-      apiKey,
+      apiKey: process.env.STREAM_VIDEO_API_KEY || "",
       userId: session.session.userId,
-      userName: session.user.name || "User",
+      userName: session.user.name || "Participant",
+      token,
+
     });
   })
   .patch("/:id", zValidator("json", updateMeetingSchema), async (c) => {
@@ -84,8 +115,8 @@ const app = new Hono()
     }
 
     const updatePayload: Record<string, unknown> = { ...body, updatedAt: new Date() };
-    if (body.startedAt) updatePayload.startedAt = new Date(body.startedAt as string);
-    if (body.endedAt) updatePayload.endedAt = new Date(body.endedAt as string);
+    if (body.startedAt) updatePayload.startedAt = new Date(body.startedAt);
+    if (body.endedAt) updatePayload.endedAt = new Date(body.endedAt);
 
     const [updatedMeeting] = await db
       .update(meeting)
