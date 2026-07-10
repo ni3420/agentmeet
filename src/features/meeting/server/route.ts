@@ -82,17 +82,17 @@ const app = new Hono()
     }
 
     await streamVideo.upsertUsers([
-  {
-    id: session.session.userId,
-    name: session.user.name || "Participant",
-    role: "admin",
-  }
-]);
+      {
+        id: session.session.userId,
+        name: session.user.name || "Participant",
+        role: "admin",
+      }
+    ]);
 
     const expirationTime = Math.floor(Date.now() / 1000) + 3600;
 
     const token = streamVideo.generateUserToken({
-      user_id: session?.session.userId,
+      user_id: session.session.userId,
       validityInSeconds: expirationTime
     });
 
@@ -102,7 +102,6 @@ const app = new Hono()
       userId: session.session.userId,
       userName: session.user.name || "Participant",
       token,
-
     });
   })
   .patch("/:id", zValidator("json", updateMeetingSchema), async (c) => {
@@ -158,6 +157,55 @@ const app = new Hono()
     }
 
     return c.json({ status: 200, message: "Meeting session destroyed cleanly" });
+  })
+  .post("/:meetingId/agent", async (c) => {
+    const meetingId = c.req.param("meetingId");
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+
+    if (!session?.session?.userId) {
+      return c.json({ status: 401, error: "Unauthorized" }, 401);
+    }
+
+    const [meetingData] = await db
+      .select()
+      .from(meeting)
+      .where(eq(meeting.id, meetingId));
+
+    if (!meetingData) {
+      return c.json({ status: 404, error: "Meeting targets missing" }, 404);
+    }
+
+    const agentId = `ai-agent-${meetingId.slice(0, 6)}`;
+    const agentName = "Gemini AI Node";
+
+    try {
+      await streamVideo.upsertUsers([
+        {
+          id: agentId,
+          name: agentName,
+          role: "admin",
+        }
+      ]);
+
+      const call = streamVideo.video.call("default", meetingId);
+
+      await call.getOrCreate({
+        data: {
+          members: [{ user_id: agentId, role: "admin" }]
+        }
+      });
+
+      console.log("meetingData fetched safely via Drizzle:", meetingData);
+
+      return c.json({
+        status: 200,
+        message: "AI Agent injected successfully into meeting stream room",
+        data: meetingData,
+      });
+    } catch (err) {
+      console.error("Stream Injection Error:", err);
+      return c.json({ status: 500, error: "WebRTC Signaling Injector Failure" }, 500);
+    }
   });
 
 export default app;

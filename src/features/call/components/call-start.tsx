@@ -1,18 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { 
-  SpeakerLayout, 
   CallControls, 
   StreamTheme, 
   useCallStateHooks, 
   CallingState,
-  useCall
+  ParticipantView
 } from "@stream-io/video-react-sdk";
 import "@stream-io/video-react-sdk/dist/css/styles.css";
-import { Loader2, Users, Sparkles, Home } from "lucide-react";
-import axios from "axios";
+import { Loader2, Users, Sparkles, Home, Bot, VideoOff } from "lucide-react";
 import Link from "next/link";
+import { useGemini } from "../api/use-gemini";
 
 interface CallStartedProps {
   meetingId: string;
@@ -21,46 +20,51 @@ interface CallStartedProps {
 }
 
 const CallStarted = ({ meetingId, meetingName, onLeave }: CallStartedProps) => {
-  const call = useCall();
   const { useCallCallingState, useParticipantCount, useParticipants } = useCallStateHooks();
   const callingState = useCallCallingState();
   const participantCount = useParticipantCount();
   const participants = useParticipants();
-  
-  const [agentStatus, setAgentStatus] = useState<"idle" | "connecting" | "active" | "failed">("idle");
+
+  const { mutate: triggerGemini, isPending: isAiLoading } = useGemini();
+  const [hasTriggeredAgent, setHasTriggeredAgent] = useState(false);
+
+  const { localParticipant, geminiParticipant, isGeminiInRoom } = useMemo(() => {
+    const local = participants.find((p) => p.isLocalParticipant);
+    
+    const gemini = participants.find((p) => {
+      const uId = p.userId?.toLowerCase() ?? "";
+      const uName = p.name?.toLowerCase() ?? "";
+      return uId.includes("ai-agent") || uId.includes("gemini") || uName.includes("gemini");
+    });
+
+    return {
+      localParticipant: local,
+      geminiParticipant: gemini,
+      isGeminiInRoom: !!gemini,
+    };
+  }, [participants]);
 
   useEffect(() => {
-    if (callingState !== CallingState.JOINED || !meetingId || agentStatus !== "idle") return;
+    if (callingState !== CallingState.JOINED || !meetingId || hasTriggeredAgent) return;
 
-    const triggerGeminiAgent = async () => {
-      setAgentStatus("connecting");
-      try {
-        await axios.post(`/api/meetings/${meetingId}/agent`);
-        setAgentStatus("active");
-      } catch (err) {
-        console.error("Failed to connect Gemini Live Worker:", err);
-        setAgentStatus("failed");
-      }
-    };
-
-    triggerGeminiAgent();
-  }, [callingState, meetingId, agentStatus]);
-
-  const isGeminiInRoom = participants.some(p => p.userId.includes("gemini-agent"));
+    setHasTriggeredAgent(true);
+    triggerGemini({ meetingId });
+  }, [callingState, meetingId, hasTriggeredAgent, triggerGemini]);
 
   if (callingState !== CallingState.JOINED) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-neutral-950 text-white gap-3">
-        <Loader2 className="size-8 animate-spin text-emerald-500" />
-        <p className="text-sm font-medium text-neutral-400">Connecting video stream feeds...</p>
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-neutral-950 text-white gap-3 select-none">
+        <Loader2 className="size-8 animate-spin text-purple-500" />
+        <p className="text-sm font-medium text-neutral-400 animate-pulse">Connecting video stream feeds...</p>
       </div>
     );
   }
 
   return (
     <StreamTheme>
-      <div className="h-screen w-screen bg-neutral-950 flex flex-col justify-between p-4 relative select-none overflow-hidden">
+      <div className="h-screen w-screen bg-neutral-950 flex flex-col justify-between p-4 relative select-none overflow-hidden text-white">
         
+        {/* Top Header Controls Area */}
         <div className="absolute top-4 left-4 right-4 z-50 flex items-center justify-between pointer-events-none">
           <div className="flex items-center gap-2">
             <div className="bg-neutral-900/70 backdrop-blur-md border border-neutral-800/80 px-4 py-2 rounded-xl flex items-center gap-3 pointer-events-auto shadow-xl">
@@ -69,8 +73,8 @@ const CallStarted = ({ meetingId, meetingName, onLeave }: CallStartedProps) => {
               </Link>
               <div className="w-px h-4 bg-neutral-800" />
               <div className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
               </div>
               <div>
                 <p className="text-[10px] text-neutral-400 font-bold tracking-wider uppercase leading-none">Live Session</p>
@@ -78,35 +82,99 @@ const CallStarted = ({ meetingId, meetingName, onLeave }: CallStartedProps) => {
               </div>
             </div>
 
+            {/* Dynamic AI Status Badge */}
             <div className={`backdrop-blur-md border px-4 py-2 rounded-xl flex items-center gap-2 pointer-events-auto shadow-xl transition-all duration-300 ${
               isGeminiInRoom 
                 ? "bg-purple-950/40 border-purple-500/30 text-purple-300" 
                 : "bg-neutral-900/70 border-neutral-800/80 text-neutral-400"
             }`}>
-              <Sparkles className={`size-4 ${isGeminiInRoom ? "animate-pulse text-purple-400" : ""}`} />
+              {isAiLoading ? (
+                <Loader2 className="size-4 animate-spin text-purple-400" />
+              ) : (
+                <Sparkles className={`size-4 ${isGeminiInRoom ? "animate-pulse text-purple-400" : ""}`} />
+              )}
               <div className="text-left">
                 <p className="text-[9px] font-bold tracking-wider uppercase leading-none text-neutral-400">Gemini Live</p>
                 <p className="text-xs font-semibold mt-0.5">
-                  {isGeminiInRoom ? "Agent Connected" : "Agent Offline"}
+                  {isGeminiInRoom ? "Agent Connected" : isAiLoading ? "Spawning Agent..." : "Agent Offline"}
                 </p>
               </div>
             </div>
           </div>
 
           <div className="bg-neutral-900/70 backdrop-blur-md border border-neutral-800/80 px-3 py-2 rounded-xl flex items-center gap-2 pointer-events-auto shadow-xl">
-            <Users className="size-4 text-emerald-400" />
+            <Users className="size-4 text-purple-400" />
             <span className="text-xs font-semibold font-mono text-neutral-200">
               {participantCount} {participantCount === 1 ? "User" : "Users"}
             </span>
           </div>
         </div>
 
-        <div className="flex-1 flex items-center justify-center relative w-full h-full overflow-hidden rounded-2xl bg-neutral-900/30 border border-neutral-900/60 mt-16 mb-2">
-          <SpeakerLayout participantsBarPosition="bottom" />
+        {/* Dynamic Video Grid Matrix Container */}
+        <div className="flex-1 flex items-center justify-center relative w-full h-full overflow-hidden rounded-2xl bg-neutral-900/10 border border-neutral-900/40 mt-16 mb-2 p-4">
+          
+          {isGeminiInRoom ? (
+            /* 👥 Cinema Style 50/50 Split Grid View Layout Mode */
+            <div className="w-full h-full grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+              
+              {/* Human View Grid Cell */}
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 overflow-hidden relative shadow-2xl">
+                {localParticipant && (
+                  <ParticipantView 
+                    participant={localParticipant} 
+                    className="w-full h-full object-cover scale-x-[-1]" 
+                  />
+                )}
+                <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-xl bg-neutral-950/85 border border-neutral-800/60 text-xs font-semibold text-neutral-200 backdrop-blur-md flex items-center gap-2">
+                  <span>{localParticipant?.name || "Participant"}</span>
+                  <span className="text-[9px] font-mono bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded font-bold uppercase">You</span>
+                </div>
+              </div>
+
+              {/* Custom Animated Gemini AI View Grid Cell */}
+              <div className="rounded-2xl border border-purple-500/20 bg-neutral-950 overflow-hidden relative shadow-2xl shadow-purple-500/5 flex flex-col items-center justify-center">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.05),transparent_65%)] animate-pulse" />
+                
+                <div className="p-5 rounded-full bg-purple-500/10 border border-purple-500/20 relative z-10">
+                  <Bot className="size-10 text-purple-400 animate-bounce" style={{ animationDuration: '3.5s' }} />
+                </div>
+                
+                <div className="mt-4 flex flex-col items-center gap-y-1 relative z-10">
+                  <span className="text-xs font-semibold text-neutral-300 tracking-wide uppercase">Gemini AI Agent</span>
+                  <p className="text-[10px] font-mono text-purple-400 animate-pulse">PRC_NODE_TRANSMITTING</p>
+                </div>
+
+                <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-xl bg-neutral-950/85 border border-neutral-800/60 text-xs font-semibold text-neutral-200 backdrop-blur-md flex items-center gap-2">
+                  <span>{geminiParticipant?.name || "Gemini AI Node"}</span>
+                  <span className="text-[9px] font-mono bg-purple-500 text-white px-1.5 py-0.5 rounded font-bold uppercase">Agent</span>
+                </div>
+              </div>
+
+            </div>
+          ) : (
+            /* 👤 Standby Mode View: Show Local View Fullscreen while AI wakes up */
+            <div className="w-full h-full rounded-2xl border border-neutral-800 bg-neutral-900/40 relative overflow-hidden flex items-center justify-center">
+              {localParticipant ? (
+                <ParticipantView 
+                  participant={localParticipant} 
+                  className="w-full h-full object-cover scale-x-[-1]" 
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-neutral-500 text-xs">
+                  <VideoOff className="size-6" /> Camera Feeds Deactivated
+                </div>
+              )}
+              
+              <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-xl bg-neutral-950/85 border border-neutral-800/60 text-xs font-semibold text-neutral-200 backdrop-blur-md">
+                Awaiting agent proxy cluster bindings...
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="w-full flex justify-center py-2 z-50 transform hover:scale-[1.01] transition-transform duration-200">
-          <div className="bg-neutral-900/80 backdrop-blur-lg px-4 rounded-2xl border border-neutral-800/80 shadow-2xl shadow-black/80 video-control-wrapper">
+        {/* Action Bottom Control Center Dock Panel */}
+        <div className="w-full flex justify-center py-2 z-50">
+          <div className="bg-neutral-900/80 backdrop-blur-lg px-4 rounded-2xl border border-neutral-800/80 shadow-2xl shadow-black/80">
             <CallControls onLeave={onLeave} />
           </div>
         </div>
