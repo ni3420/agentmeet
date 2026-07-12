@@ -1,51 +1,49 @@
-import { client as rpcClient } from "@/lib/rpc";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { client } from "@/lib/rpc";
+import { StreamVideoClient } from "@stream-io/video-react-sdk";
+import { useMutation } from "@tanstack/react-query";
+import { InferResponseType } from "hono";
 
-interface GeminiMutationPayload {
-  meetingId: string;
-}
+type ResponseType = InferResponseType<
+  typeof client.api.rpc.call[":callType"][":callId"]["connect"]["$post"]
+>;
 
-interface GeminiMutationResponse {
-  status: number;
-  message: string;
-  data: {
-    id: string;
-    userId: string;
-    name: string;
-    agentId: string;
-    instructions: string | null;
-    status: string;
-    createdAt: string;
-    updatedAt: string;
-  };
+interface RequestType {
+  id: string;
 }
 
 export const useGemini = () => {
-  const queryClient = useQueryClient();
+  return useMutation<ResponseType, Error, RequestType>({
+    mutationFn: async ({ id }) => {
+      const res =
+        await client.api.rpc.call[":callType"][":callId"]["connect"]["$post"]({
+          param: {
+            callId: id,
+            callType: "default",
+          },
+        });
 
-  return useMutation<GeminiMutationResponse, Error, GeminiMutationPayload>({
-    mutationFn: async ({ meetingId }) => {
-      // FIXED: Hono RPC Dynamic Param Passing Syntax with .$post() execution
-      const response = await rpcClient.api.rpc.meeting[":meetingId"]["agent"].$post({
-        param: { meetingId },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "AI Gate closed" }));
-        throw new Error((errorData as any).error || "Network error over RPC cluster");
+      if (!res.ok) {
+        throw new Error("Failed to connect Gemini");
       }
 
-      // FIXED: Resolved RPC stream payload cleanly using .json() instead of axios .data
-      return (await response.json()) as GeminiMutationResponse;
-    },
-    onSuccess: (_, variables) => {
-      toast.success("AI Agent cluster successfully provisioned.");
-      queryClient.invalidateQueries({ queryKey: ["meeting", variables.meetingId] });
-    },
-    onError: (error) => {
-      console.error("AI Bridge Node Error:", error);
-      toast.error(error instanceof Error ? error.message : "AI Gateway Failure");
+      const data = await res.json();
+
+      const videoClient = new StreamVideoClient({
+        apiKey: data.apiKey,
+        user: data.user,
+        token: data.token,
+      });
+
+      const call = videoClient.call(data.callType, data.callId);
+
+      await call.join()
+      call.microphone.enable()
+      call.camera.enable()
+
+      console.log("Gemini AI Bot joined!");
+
+
+      return data;
     },
   });
 };
