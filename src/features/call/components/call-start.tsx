@@ -12,6 +12,8 @@ import "@stream-io/video-react-sdk/dist/css/styles.css";
 import { Loader2, Users, Sparkles, Home, Bot, VideoOff } from "lucide-react";
 import Link from "next/link";
 import { useGemini } from "../api/use-gemini";
+import { startPCMCapture } from "../hook/audio-capture";
+import { gemini } from "../hook/Gemini";
 
 interface CallStartedProps {
   meetingId: string;
@@ -20,10 +22,12 @@ interface CallStartedProps {
 }
 
 const CallStarted = ({ meetingId, meetingName, onLeave }: CallStartedProps) => {
-  const { useCallCallingState, useParticipantCount, useParticipants } = useCallStateHooks();
+  const { useCallCallingState, useParticipantCount, useParticipants,useMicrophoneState } = useCallStateHooks();
   const callingState = useCallCallingState();
   const participantCount = useParticipantCount();
   const participants = useParticipants();
+  const {mediaStream}=useMicrophoneState()
+  
 
   const { mutate: triggerGemini, isPending: isAiLoading } = useGemini();
   const [hasTriggeredAgent, setHasTriggeredAgent] = useState(false);
@@ -47,9 +51,27 @@ const CallStarted = ({ meetingId, meetingName, onLeave }: CallStartedProps) => {
   useEffect(() => {
     if (callingState !== CallingState.JOINED || !meetingId || hasTriggeredAgent) return;
 
+
+
     setHasTriggeredAgent(true);
-    triggerGemini({ meetingId });
-  }, [callingState, meetingId, hasTriggeredAgent, triggerGemini]);
+    triggerGemini({id: meetingId });
+    const stream=mediaStream;
+    if(!stream) return
+
+    let recorder: Awaited<ReturnType<typeof startPCMCapture>>;
+
+  (async () => {
+    recorder = await startPCMCapture(stream, (pcm) => {
+gemini.sendPCM(pcm)
+      // Gemini ko bhejo
+      // gemini.sendPCM(pcm);
+    });
+  })();
+
+  return () => {
+    recorder?.stop();
+  };
+  }, [callingState, meetingId, hasTriggeredAgent, triggerGemini,mediaStream]);
 
   if (callingState !== CallingState.JOINED) {
     return (

@@ -142,6 +142,7 @@ const CallUI = ({
 
           {viewState === "active" && (
             <CallStarted 
+             meetingId={meetingId}
               meetingName={meetingName} 
               onLeave={handleLeaveCall} 
             />
