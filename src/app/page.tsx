@@ -1,18 +1,21 @@
 "use client"
 
-import { useGemini } from "@/features/call/api/use-gemini";
+import { authClient } from "@/lib/auth-client";
 import { useEffect } from "react";
 
 const Page = () => {
-const {data,mutate}=useGemini()
-useEffect(()=>{
-mutate({
-  id:"hc3gnKvn32ZoAqhIbnqam"
-})
-},[mutate])
+  useEffect(()=>{
+const init=async()=>{
+  const session=await authClient.getSession()
+  console.log(session)
+}   
+init() 
+  },[])
+
+
+
   return ( <>
   Home
-  <p>{JSON.stringify(data)}</p>
   </> );
 }
  
